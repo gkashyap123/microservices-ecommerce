@@ -1,0 +1,14 @@
+# Install all dependencies (creates uv.lock automatically)
+uv sync
+
+# Add a new package
+uv add fastapi
+
+# Add a dev-only package
+uv add --dev pytest
+
+# Remove a package
+uv remove somepackage
+
+# Install including dev dependencies
+uv sync --extra dev
