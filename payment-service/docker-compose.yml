@@ -1,0 +1,9 @@
+services:
+  payment-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: paymentdb
+    ports:
+      - "5436:5432"

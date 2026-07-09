@@ -1,0 +1,9 @@
+services:
+  order-db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: orderdb
+    ports:
+      - "5435:5432"   # 5435 → no conflict with auth(5433) or product(5434)

@@ -15,6 +15,7 @@ export const useAuth = () => {
   const loginMutation = useMutation({
     mutationFn: async (data: LoginRequest) => {
       const tokenRes = await authService.login(data);
+      console.log("Token Response:", tokenRes); // Debugging line
       const user     = await authService.getMe(tokenRes.access_token);
       return { token: tokenRes.access_token, user };
     },

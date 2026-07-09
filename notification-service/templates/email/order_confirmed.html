@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: Arial, sans-serif; max-width: 600px; margin: auto;">
+  <h2 style="color: #2ecc71;">✅ Order Confirmed!</h2>
+  <p>Hi there! Your order <strong>#{{ order_id }}</strong> has been confirmed.</p>
+
+  <table width="100%" cellpadding="8" style="border-collapse: collapse;">
+    <tr style="background:#f4f4f4;">
+      <th align="left">Product</th>
+      <th align="right">Qty</th>
+      <th align="right">Subtotal</th>
+    </tr>
+    {% for item in items %}
+    <tr style="border-bottom: 1px solid #eee;">
+      <td>{{ item.name }}</td>
+      <td align="right">{{ item.quantity }}</td>
+      <td align="right">${{ item.subtotal }}</td>
+    </tr>
+    {% endfor %}
+    <tr>
+      <td colspan="2"><strong>Total</strong></td>
+      <td align="right"><strong>${{ total_price }}</strong></td>
+    </tr>
+  </table>
+
+  <p style="color: #888; font-size: 12px; margin-top: 24px;">
+    Thank you for shopping with us!
+  </p>
+</body>
+</html>

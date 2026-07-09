@@ -1,0 +1,25 @@
+"""CORS configuration helper for all services"""
+import json
+from typing import List
+import os
+
+
+def get_cors_origins() -> List[str]:
+    """Get CORS origins from environment or use defaults"""
+    cors_env = os.getenv("CORS_ORIGINS", "").strip()
+
+    if cors_env:
+        if cors_env.startswith("[") and cors_env.endswith("]"):
+            try:
+                values = json.loads(cors_env)
+                return [str(origin).strip().strip('"').strip("'") for origin in values]
+            except json.JSONDecodeError:
+                pass
+        return [origin.strip().strip('"').strip("'") for origin in cors_env.split(",") if origin.strip()]
+
+    # Default origins for development
+    return [
+        "http://localhost:3000",      # Next.js dev server
+        "http://localhost:5173",      # Vite dev server
+        "http://frontend:3000",       # Docker container
+    ]
