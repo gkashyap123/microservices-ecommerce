@@ -12,8 +12,9 @@ export const authService = {
     return res.data;
   },
 
-  getMe: async (): Promise<User> => {
-    const res = await api.get("/auth/me");
+  getMe: async (token?: string): Promise<User> => {
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+    const res = await api.get("/auth/me", config);
     return res.data;
   },
 };

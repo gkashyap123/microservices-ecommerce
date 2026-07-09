@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.auth_router import router
-from core.database import Base, engine
 from core.cors import get_cors_origins
+from core.database import Base, engine, wait_for_db
 
+wait_for_db()
 Base.metadata.create_all(bind=engine)   # creates tables on startup
 
 app = FastAPI(title="Auth Service")
