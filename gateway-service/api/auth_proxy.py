@@ -7,10 +7,8 @@ Protected routes: everything else (requires valid JWT)
 import httpx
 import json
 from fastapi import APIRouter, Request, Response, Depends, HTTPException, status, Body
-from fastapi.responses import StreamingResponse
 
 from core.config import get_settings, Settings
-from core.cors import get_cors_origins
 from core.dependencies import get_current_user   # shared JWT guard
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -39,12 +37,12 @@ async def _proxy(
     else:
         body = await request.body()
 
-    headers = {k: v for k, v in request.headers.items() if k.lower() != "host"}
-    if payload is not None and "content-type" not in {k.lower() for k in headers.keys()}:
-        headers["content-type"] = "application/json"
-        
-    #headers = dict(request.headers)
-    #headers.pop("host", None)
+    # headers = {k: v for k, v in request.headers.items() if k.lower() != "host"}
+    # if payload is not None and "content-type" not in {k.lower() for k in headers.keys()}:
+    #     headers["content-type"] = "application/json"
+
+    headers = dict(request.headers)
+    headers.pop("host", None)
 
     timeout = httpx.Timeout(
         connect=settings.PROXY_CONNECT_TIMEOUT,
@@ -61,26 +59,31 @@ async def _proxy(
                 headers=headers,
                 content=body,
             )
-    except httpx.ConnectError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Auth service is unreachable.",
-        )
-    except httpx.TimeoutException:
-        raise HTTPException(
-            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
-            detail="Auth service timed out.",
-        )
 
-    response_headers = dict(upstream.headers)
-    origin = request.headers.get("origin")
-    allowed = get_cors_origins()
-    if origin and origin in allowed:
-        response_headers["access-control-allow-origin"] = origin
-        response_headers["access-control-allow-credentials"] = "true"
-    else:
-        response_headers.setdefault("access-control-allow-origin", allowed[0] if allowed else "*")
-        response_headers.setdefault("access-control-allow-credentials", "true")
+            print("=" * 80)
+            print("AUTH_SERVICE_URL:", settings.AUTH_SERVICE_URL)
+            print("REQUEST PATH:", request.url.path)
+            print("FINAL URL:", url)
+            print("=" * 80)
+
+    except httpx.ConnectError:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Auth service is unreachable.")
+    except httpx.TimeoutException:
+        raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, "Auth service timed out.")
+
+    # Filter out hop-by-hop headers that should not be forwarded to the client.
+    excluded = {
+        "content-encoding",
+        "transfer-encoding",
+        "connection",
+        "keep-alive",
+        "proxy-authenticate",
+        "proxy-authorization",
+        "te",
+        "trailers",
+        "upgrade",
+    }
+    response_headers = {k: v for k, v in upstream.headers.items() if k.lower() not in excluded}
 
     return Response(
         content=upstream.content,
