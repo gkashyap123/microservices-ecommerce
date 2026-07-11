@@ -36,7 +36,7 @@ export default function RazorpayCheckout({ order, userEmail, userPhone }: Props)
       },
     };
 
-    // @ts-ignore — Razorpay loaded via CDN script tag
+    // @ts-expect-error — Razorpay loaded via CDN script tag
     const rzp = new window.Razorpay(options);
     rzp.open();
   };

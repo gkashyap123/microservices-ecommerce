@@ -24,7 +24,8 @@ export const useCart = () => {
   const { data: cart, isLoading } = useQuery({
     queryKey: ["cart", userId],
     queryFn:  async () => {
-      const c = await cartService.getCart(requireLogin());
+      requireLogin();
+      const c = await cartService.getCart();
       dispatch(setCart(c));
       return c;
     },
@@ -36,23 +37,34 @@ export const useCart = () => {
   const addItem = useMutation({
     mutationFn: (item: {
       product_id: number; name: string; price: number; quantity: number;
-    }) => cartService.addItem(requireLogin(), item),
+    }) => {
+      requireLogin();
+      return cartService.addItem(item);
+    },
     onSuccess: (c) => { dispatch(setCart(c)); invalidate(); toast.success("Added to cart"); },
   });
 
   const updateItem = useMutation({
-    mutationFn: ({ productId, quantity }: { productId: number; quantity: number }) =>
-      cartService.updateItem(requireLogin(), productId, quantity),
+    mutationFn: ({ productId, quantity }: { productId: number; quantity: number }) => {
+      requireLogin();
+      return cartService.updateItem(productId, quantity);
+    },
     onSuccess: (c) => { dispatch(setCart(c)); invalidate(); },
   });
 
   const removeItem = useMutation({
-    mutationFn: (productId: number) => cartService.removeItem(requireLogin(), productId),
+    mutationFn: (productId: number) => {
+      requireLogin();
+      return cartService.removeItem(productId);
+    },
     onSuccess: (c) => { dispatch(setCart(c)); invalidate(); toast.success("Item removed"); },
   });
 
   const clear = useMutation({
-    mutationFn: () => cartService.clearCart(requireLogin()),
+    mutationFn: () => {
+      requireLogin();
+      return cartService.clearCart();
+    },
     onSuccess: () => { dispatch(clearCart()); invalidate(); },
   });
 
