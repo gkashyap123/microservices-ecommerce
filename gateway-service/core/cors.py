@@ -19,6 +19,7 @@ def get_cors_origins() -> List[str]:
 
     # Default origins for development
     return [
+        "https://agent-6a50a778836464cd1769d9c--ecom-microservice.netlify.app",
         "http://localhost:3000",      # Next.js dev server
         "http://localhost:5173",      # Vite dev server
         "http://frontend:3000",       # Docker container
