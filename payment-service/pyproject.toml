@@ -17,3 +17,13 @@ dependencies = [
     "sqlalchemy>=2.0.51",
     "uvicorn[standard]>=0.29.0",
 ]
+
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["api", "clients", "core", "models", "repositories", "schemas", "services"]
+
+[tool.setuptools.package-dir]
+"" = "."

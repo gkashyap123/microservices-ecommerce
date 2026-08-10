@@ -5,9 +5,9 @@ Public routes: /auth/login, /auth/register, /auth/refresh
 Protected routes: everything else (requires valid JWT)
 """
 import httpx
-import json
 from fastapi import APIRouter, Request, Response, Depends, HTTPException, status, Body
 
+from api.proxy_utils import build_proxy_content, make_proxy_headers
 from core.config import get_settings, Settings
 from core.dependencies import get_current_user   # shared JWT guard
 
@@ -32,17 +32,8 @@ async def _proxy(
     if request.url.query:
         url = f"{url}?{request.url.query}"
 
-    if payload is not None:
-        body = json.dumps(payload).encode("utf-8")
-    else:
-        body = await request.body()
-
-    # headers = {k: v for k, v in request.headers.items() if k.lower() != "host"}
-    # if payload is not None and "content-type" not in {k.lower() for k in headers.keys()}:
-    #     headers["content-type"] = "application/json"
-
-    headers = dict(request.headers)
-    headers.pop("host", None)
+    body = await build_proxy_content(request, payload)
+    headers = make_proxy_headers(request, payload)
 
     timeout = httpx.Timeout(
         connect=settings.PROXY_CONNECT_TIMEOUT,
@@ -52,24 +43,28 @@ async def _proxy(
     )
 
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            upstream = await client.request(
-                method=request.method,
-                url=url,
-                headers=headers,
-                content=body,
-            )
+        client = request.app.state.http_client
+        upstream = await client.request(
+            method=request.method,
+            url=url,
+            headers=headers,
+            content=body,
+        )
 
-            print("=" * 80)
-            print("AUTH_SERVICE_URL:", settings.AUTH_SERVICE_URL)
-            print("REQUEST PATH:", request.url.path)
-            print("FINAL URL:", url)
-            print("=" * 80)
+        print("=" * 80)
+        print("AUTH_SERVICE_URL:", settings.AUTH_SERVICE_URL)
+        print("REQUEST PATH:", request.url.path)
+        print("FINAL URL:", url)
+        print("=" * 80)
 
     except httpx.ConnectError:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Auth service is unreachable.")
     except httpx.TimeoutException:
         raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, "Auth service timed out.")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Auth proxy error: {exc}")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Auth proxy error: {exc}")
 
     # Filter out hop-by-hop headers that should not be forwarded to the client.
     excluded = {

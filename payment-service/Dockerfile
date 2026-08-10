@@ -10,11 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy project files
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies
-RUN pip install --no-cache-dir -e .
-
 # Copy application code
 COPY . .
+
+# Install dependencies
+RUN pip install --no-cache-dir -e .
 
 EXPOSE 8000
 

@@ -4,9 +4,9 @@ Forwards /cart/* requests to the upstream cart-service.
 All cart operations require authentication (carts are per-user).
 """
 import httpx
-import json
 from fastapi import APIRouter, Request, Response, Depends, HTTPException, status, Body
 
+from api.proxy_utils import build_proxy_content, make_proxy_headers
 from core.config import get_settings, Settings
 from core.cors import get_cors_origins
 from core.dependencies import get_current_user
@@ -23,14 +23,8 @@ async def _proxy(request: Request, settings: Settings, payload: dict | None = No
         if request.url.query:
             url = f"{url}?{request.url.query}"
 
-    if payload is not None:
-        body = json.dumps(payload).encode("utf-8")
-    else:
-        body = await request.body()
-
-    headers = {k: v for k, v in request.headers.items() if k.lower() != "host"}
-    if payload is not None and "content-type" not in {k.lower() for k in headers.keys()}:
-        headers["content-type"] = "application/json"
+    body = await build_proxy_content(request, payload)
+    headers = make_proxy_headers(request, payload)
 
     timeout = httpx.Timeout(
         connect=settings.PROXY_CONNECT_TIMEOUT,
@@ -40,17 +34,19 @@ async def _proxy(request: Request, settings: Settings, payload: dict | None = No
     )
 
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            upstream = await client.request(
-                method=request.method,
-                url=url,
-                headers=headers,
-                content=body,
-            )
+        client = request.app.state.http_client
+        upstream = await client.request(
+            method=request.method,
+            url=url,
+            headers=headers,
+            content=body,
+        )
     except httpx.ConnectError:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Cart service is unreachable.")
     except httpx.TimeoutException:
         raise HTTPException(status.HTTP_504_GATEWAY_TIMEOUT, "Cart service timed out.")
+    except httpx.HTTPError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"Cart proxy error: {exc}")
 
     # Ensure CORS headers are present on proxied responses so browser receives them
     response_headers = dict(upstream.headers)

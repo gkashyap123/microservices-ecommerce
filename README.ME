@@ -1,0 +1,105 @@
+If you mean **Docker container commands**, here are the most useful ones for your microservices project.
+
+### 1. See running containers
+
+```bash
+docker ps
+```
+
+### 2. See all containers
+
+```bash
+docker ps -a
+```
+
+### 3. Enter your gateway container
+
+Since you're using Docker Compose:
+
+```bash
+docker compose exec gateway-service sh
+```
+
+You'll get:
+
+```text
+#
+```
+
+Now you're **inside the container**.
+
+### 4. Enter the auth container
+
+```bash
+docker compose exec auth-service sh
+```
+
+### 5. Enter the product container
+
+```bash
+docker compose exec product-service sh
+```
+
+### 6. Check containers from Compose
+
+```bash
+docker compose ps
+```
+
+### 7. View gateway logs
+
+```bash
+docker compose logs gateway-service
+```
+
+Follow logs live:
+
+```bash
+docker compose logs -f gateway-service
+```
+
+### 8. Restart a service
+
+```bash
+docker compose restart gateway-service
+```
+
+### 9. Rebuild and start everything
+
+```bash
+docker compose up -d --build
+```
+
+### 10. Stop everything
+
+```bash
+docker compose down
+```
+
+### For your current networking issue
+
+Enter the gateway:
+
+```bash
+docker compose exec gateway-service sh
+```
+
+Then **inside the container** run:
+
+```bash
+python -c "import socket; print(socket.gethostbyname('auth-service'))"
+```
+
+Then test the Auth API:
+
+```bash
+python -c "import urllib.request; print(urllib.request.urlopen('http://auth-service:8000/health').read().decode())"
+```
+
+Expected:
+
+```text
+{"status":"ok"}
+```
+
+This is the correct test because `auth-service` is a Docker service name and can only be resolved **from another container on the Docker network**.

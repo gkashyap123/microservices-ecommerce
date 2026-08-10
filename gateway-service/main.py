@@ -27,7 +27,15 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     """Startup / shutdown logic (e.g. warm-up shared HTTP client pools)."""
     print(f"🚀  {settings.APP_NAME} v{settings.APP_VERSION} starting …")
-    yield
+    timeout = httpx.Timeout(
+        connect=settings.PROXY_CONNECT_TIMEOUT,
+        read=settings.PROXY_TIMEOUT,
+        write=settings.PROXY_TIMEOUT,
+        pool=settings.PROXY_TIMEOUT,
+    )
+    async with httpx.AsyncClient(timeout=timeout) as client:
+        app.state.http_client = client
+        yield
     print("🛑  Gateway shutting down.")
 
 
@@ -62,6 +70,13 @@ async def connect_error_handler(request: Request, exc: httpx.ConnectError):
     return JSONResponse(
         status_code=503,
         content={"detail": "An upstream service is currently unavailable."},
+    )
+
+@app.exception_handler(httpx.HTTPError)
+async def httpx_error_handler(request: Request, exc: httpx.HTTPError):
+    return JSONResponse(
+        status_code=502,
+        content={"detail": "Upstream request failed.", "error": str(exc)},
     )
 
 @app.options("/{full_path:path}")
