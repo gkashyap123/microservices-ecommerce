@@ -5,13 +5,29 @@ Public routes: /auth/login, /auth/register, /auth/refresh
 Protected routes: everything else (requires valid JWT)
 """
 import httpx
-from fastapi import APIRouter, Request, Response, Depends, HTTPException, status, Body
+from pydantic import BaseModel, EmailStr
+from fastapi import APIRouter, Request, Response, Depends, HTTPException, status
 
 from api.proxy_utils import build_proxy_content, make_proxy_headers
 from core.config import get_settings, Settings
 from core.dependencies import get_current_user   # shared JWT guard
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+
+class RegisterRequest(BaseModel):
+    username: str
+    email: EmailStr
+    password: str
+
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str
 
 # These paths do NOT require an existing token
 _PUBLIC_PATHS = {"/auth/login", "/auth/register", "/auth/refresh"}
@@ -91,21 +107,21 @@ async def _proxy(
 # ── Public endpoints ──────────────────────────────────────────────────────────
 
 @router.post("/login")
-async def login(request: Request, payload: dict | None = Body(None), settings: Settings = Depends(get_settings)):
+async def login(request: Request, payload: LoginRequest, settings: Settings = Depends(get_settings)):
     """Obtain access + refresh tokens."""
-    return await _proxy(request, settings, payload=payload)
+    return await _proxy(request, settings, payload=payload.dict())
 
 
 @router.post("/register")
-async def register(request: Request, payload: dict | None = Body(None), settings: Settings = Depends(get_settings)):
+async def register(request: Request, payload: RegisterRequest, settings: Settings = Depends(get_settings)):
     """Create a new user account."""
-    return await _proxy(request, settings, payload=payload)
+    return await _proxy(request, settings, payload=payload.dict())
 
 
 @router.post("/refresh")
-async def refresh_token(request: Request, payload: dict | None = Body(None), settings: Settings = Depends(get_settings)):
+async def refresh_token(request: Request, payload: RefreshRequest, settings: Settings = Depends(get_settings)):
     """Exchange a refresh token for a new access token."""
-    return await _proxy(request, settings, payload=payload)
+    return await _proxy(request, settings, payload=payload.dict())
 
 
 # ── Protected endpoints ───────────────────────────────────────────────────────
@@ -123,7 +139,7 @@ async def get_profile(
 @router.put("/me")
 async def update_profile(
     request: Request,
-    payload: dict | None = Body(None),
+    payload: dict | None = None,
     settings: Settings = Depends(get_settings),
     _user=Depends(get_current_user),
 ):
@@ -134,7 +150,7 @@ async def update_profile(
 @router.post("/logout")
 async def logout(
     request: Request,
-    payload: dict | None = Body(None),
+    payload: dict | None = None,
     settings: Settings = Depends(get_settings),
     _user=Depends(get_current_user),
 ):
@@ -145,7 +161,7 @@ async def logout(
 @router.post("/change-password")
 async def change_password(
     request: Request,
-    payload: dict | None = Body(None),
+    payload: dict | None = None,
     settings: Settings = Depends(get_settings),
     _user=Depends(get_current_user),
 ):

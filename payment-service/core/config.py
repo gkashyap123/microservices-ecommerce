@@ -10,8 +10,8 @@ class Settings(BaseSettings):
     RAZORPAY_WEBHOOK_SECRET: str
 
     # Other services
-    ORDER_SERVICE_URL: str = "http://localhost:8003"
-    RABBITMQ_URL: str
+    ORDER_SERVICE_URL: str = "http://order-service:8000"
+    RABBITMQ_URL: str = "amqp://guest:guest@rabbitmq:5672/"
     QUEUE_NAME: str = "payment_events"
 
     class Config:
