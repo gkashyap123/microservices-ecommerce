@@ -1,0 +1,6 @@
+case_id,category,input,expected_node,actual_node,passed,failure_reason
+ROUTE-001,routing,Where is order 101?,order_agent,order_agent,True,
+ROUTE-002,routing,Find smartphones under 50000,product_agent,product_agent,True,
+ROUTE-003,routing,What is your return policy?,rag_agent,rag_agent,True,
+ROUTE-004,routing,Cancel order 101,cancel_agent,cancel_agent,True,
+ROUTE-005,routing,"Hello, how can you help me?",response,response,True,

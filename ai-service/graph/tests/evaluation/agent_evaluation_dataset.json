@@ -1,0 +1,38 @@
+
+[
+  {
+    "case_id": "ROUTE-001",
+    "category": "routing",
+    "input": "Where is order 101?",
+    "intent": "ORDER_STATUS",
+    "expected_node": "order_agent"
+  },
+  {
+    "case_id": "ROUTE-002",
+    "category": "routing",
+    "input": "Find smartphones under 50000",
+    "intent": "PRODUCT_SEARCH",
+    "expected_node": "product_agent"
+  },
+  {
+    "case_id": "ROUTE-003",
+    "category": "routing",
+    "input": "What is your return policy?",
+    "intent": "REFUND_POLICY",
+    "expected_node": "rag_agent"
+  },
+  {
+    "case_id": "ROUTE-004",
+    "category": "routing",
+    "input": "Cancel order 101",
+    "intent": "ORDER_CANCEL",
+    "expected_node": "cancel_agent"
+  },
+  {
+    "case_id": "ROUTE-005",
+    "category": "routing",
+    "input": "Hello, how can you help me?",
+    "intent": "GENERAL",
+    "expected_node": "response"
+  }
+]

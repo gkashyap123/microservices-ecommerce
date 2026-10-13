@@ -1,0 +1,19 @@
+
+[
+  {
+    "question": "Can I return a damaged item?",
+    "ground_truth": "Damaged items can be returned within 7 days of delivery.",
+    "contexts": [
+      "Damaged items can be returned within 7 days of delivery."
+    ],
+    "answer": "Damaged items can be returned within 7 days."
+  },
+  {
+    "question": "What is the return window?",
+    "ground_truth": "Customers can return eligible items within 7 days.",
+    "contexts": [
+      "Customers can return eligible items within 7 days."
+    ],
+    "answer": "Eligible items can be returned within 7 days."
+  }
+]
