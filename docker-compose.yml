@@ -103,3 +103,17 @@ services:
     build: ./frontend/ecommerce-ui
     ports:
       - "5173:5173"
+
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    env_file:
+      - ./ai-service/.env
+    ports:
+      - "8010:8010"
+    depends_on:
+      - order-service
+      - product-service
+    restart: unless-stopped

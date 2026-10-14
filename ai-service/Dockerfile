@@ -1,18 +1,26 @@
+
 FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# Install dependencies separately to improve build caching.
+COPY requirements.txt ./
 
-COPY pyproject.toml .
+RUN python -m pip install --upgrade pip && \
+    pip install -r requirements.txt
 
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir \
-        "fastapi>=0.115,<1.0" \
-        "uvicorn[standard]>=0.30,<1.0"
-
+# Copy application source.
 COPY . .
+
+# Run as a non-root user.
+RUN useradd --create-home --uid 10001 appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8010
 

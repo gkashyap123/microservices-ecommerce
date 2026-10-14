@@ -10,17 +10,18 @@ from langgraph.types import Command
 from graph.workflow import build_graph
 from tools.order_tool import get_order
 from core.security import get_current_user
+from core.guardrails import validate_user_message
 
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
 logger = logging.getLogger(__name__)
 
-# Keep one graph instance so its checkpointer can retain state.
+# Build the graph once so its checkpointer can retain state.
 graph = build_graph()
 
 # DEVELOPMENT ONLY:
-# These mappings are lost on restart and are not shared across workers.
-# Use durable storage for production.
+# Lost on restart and not shared across multiple workers.
+# Use durable storage before production deployment.
 conversation_histories: dict[
     str, list[dict[str, str]]
 ] = defaultdict(list)
@@ -32,7 +33,11 @@ MAX_HISTORY = 20
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1, max_length=4000)
-    thread_id: str | None = Field(default=None, min_length=1, max_length=128)
+    thread_id: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=128,
+    )
 
 
 class ChatResponse(BaseModel):
@@ -66,7 +71,10 @@ def get_user_id(current_user: dict) -> str:
     return str(user_id)
 
 
-def verify_thread_owner(thread_id: str, current_user: dict) -> None:
+def verify_thread_owner(
+    thread_id: str,
+    current_user: dict,
+) -> None:
     user_id = get_user_id(current_user)
     owner_id = conversation_owners.get(thread_id)
 
@@ -89,10 +97,12 @@ def save_history(
     assistant_response: str,
 ) -> None:
     history = conversation_histories[thread_id]
+
     history.extend([
         {"role": "user", "content": user_message},
         {"role": "assistant", "content": assistant_response},
     ])
+
     conversation_histories[thread_id] = history[-MAX_HISTORY:]
 
 
@@ -103,6 +113,11 @@ async def chat(
 ):
     user_id = get_user_id(current_user)
 
+    # INPUT GUARDRAIL:
+    # Validate before creating a thread or invoking the graph.
+    cleaned_message = validate_user_message(request.message)
+
+    # Create a conversation or verify ownership of an existing one.
     if request.thread_id is None:
         thread_id = str(uuid4())
         conversation_owners[thread_id] = user_id
@@ -110,7 +125,11 @@ async def chat(
         thread_id = request.thread_id
         verify_thread_owner(thread_id, current_user)
 
-    config = {"configurable": {"thread_id": thread_id}}
+    config = {
+        "configurable": {
+            "thread_id": thread_id,
+        }
+    }
 
     try:
         snapshot = await graph.aget_state(config)
@@ -127,7 +146,7 @@ async def chat(
         history = conversation_histories[thread_id].copy()
 
         initial_state = {
-            "user_message": request.message,
+            "user_message": cleaned_message,
             "intent": "",
             "response": "",
             "order": None,
@@ -135,7 +154,11 @@ async def chat(
             "conversation_history": history,
         }
 
-        result = await graph.ainvoke(initial_state, config=config)
+        result = await graph.ainvoke(
+            initial_state,
+            config=config,
+        )
+
         interrupt_value = get_interrupt_value(result)
 
         if interrupt_value is not None:
@@ -154,7 +177,12 @@ async def chat(
 
         response_text = result.get("response", "")
 
-        save_history(thread_id, request.message, response_text)
+        # Save the validated message only after a completed turn.
+        save_history(
+            thread_id,
+            cleaned_message,
+            response_text,
+        )
 
         return ChatResponse(
             intent=result.get("intent", ""),
@@ -178,10 +206,13 @@ async def confirm_cancellation(
     request: ConfirmationRequest,
     current_user: dict = Depends(get_current_user),
 ):
+    # Only the owner of this conversation may resume it.
     verify_thread_owner(request.thread_id, current_user)
 
     config = {
-        "configurable": {"thread_id": request.thread_id}
+        "configurable": {
+            "thread_id": request.thread_id,
+        }
     }
 
     try:
@@ -193,9 +224,8 @@ async def confirm_cancellation(
                 detail="No pending confirmation for this conversation.",
             )
 
-        # Only allow this endpoint to resume an actual cancellation.
-        # The graph state must retain the intent while interrupted.
-        pending_intent = snapshot.values.get("intent")
+        # Restrict this endpoint to the cancellation workflow.
+        pending_intent = (snapshot.values or {}).get("intent")
 
         if pending_intent != "ORDER_CANCEL":
             raise HTTPException(
@@ -225,7 +255,7 @@ async def confirm_cancellation(
             )
 
         response_text = result.get("response", "")
-        original_message = snapshot.values.get(
+        original_message = (snapshot.values or {}).get(
             "user_message",
             "Order cancellation request",
         )
@@ -269,13 +299,13 @@ async def test_order(
                 detail="Unexpected response from Order Service.",
             )
 
-        # Defense in depth: do not return an order unless its owner
-        # matches the authenticated JWT subject.
+        # Defense in depth: verify the order owner before returning data.
         order_user_id = order.get("user_id")
 
         if order_user_id is None:
             logger.error(
-                "Order Service response lacks user_id; cannot verify ownership."
+                "Order Service response lacks user_id; "
+                "ownership cannot be verified."
             )
             raise HTTPException(
                 status_code=502,
@@ -283,13 +313,15 @@ async def test_order(
             )
 
         if str(order_user_id) != user_id:
-            # 404 avoids confirming another user's order exists.
             raise HTTPException(
                 status_code=404,
                 detail="Order not found.",
             )
 
-        return {"success": True, "order": order}
+        return {
+            "success": True,
+            "order": order,
+        }
 
     except HTTPException:
         raise
