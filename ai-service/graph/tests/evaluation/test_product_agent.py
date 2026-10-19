@@ -110,3 +110,44 @@ async def test_product_agent_preserves_conversation_context():
         min_price=None,
         max_price=15000,
     )
+
+@pytest.mark.asyncio
+async def test_product_agent_does_not_silently_hide_tool_failure():
+    state = {
+        "user_message": "Show smartphones under 20000",
+        "conversation_history": [],
+    }
+
+    criteria = ProductSearchCriteria(
+        search="smartphones",
+        max_price=20000,
+    )
+
+    mock_llm = MagicMock()
+    mock_structured_llm = MagicMock()
+    mock_structured_llm.ainvoke = AsyncMock(
+        return_value=criteria
+    )
+    mock_llm.with_structured_output.return_value = (
+        mock_structured_llm
+    )
+
+    with (
+        patch(
+            "agents.product_agent.get_llm",
+            return_value=mock_llm,
+        ),
+        patch(
+            "agents.product_agent.search_products",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("Database unavailable"),
+        ) as mock_search,
+    ):
+        with pytest.raises(RuntimeError, match="Database unavailable"):
+            await product_agent_node(state)
+
+    mock_search.assert_awaited_once_with(
+        search="smartphones",
+        min_price=None,
+        max_price=20000,
+    )

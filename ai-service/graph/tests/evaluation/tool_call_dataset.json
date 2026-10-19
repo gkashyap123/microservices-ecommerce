@@ -1,0 +1,24 @@
+
+[
+  {
+    "case_id": "TOOL-001",
+    "agent": "product_agent",
+    "scenario": "Search products under a price limit",
+    "expected_tool": "search_products",
+    "expected_behavior": "Pass the correct search term and maximum price"
+  },
+  {
+    "case_id": "TOOL-002",
+    "agent": "order_agent",
+    "scenario": "Retrieve an order by ID",
+    "expected_tool": "get_order",
+    "expected_behavior": "Call the tool with the requested order ID"
+  },
+  {
+    "case_id": "TOOL-003",
+    "agent": "cancel_agent",
+    "scenario": "Cancel an eligible order",
+    "expected_tool": "cancel_order",
+    "expected_behavior": "Call only after explicit confirmation"
+  }
+]
