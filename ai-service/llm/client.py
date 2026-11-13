@@ -16,7 +16,7 @@ def get_llm() -> ChatOpenAI:
         )
 
     return ChatOpenAI(
-        model="gpt-4o-mini",
+        model="gpt-6.1-terra", #model="gpt-4o-mini",
         temperature=0,
         api_key=api_key,
     )

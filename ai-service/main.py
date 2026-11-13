@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from api.chat import router as chat_router
 from api.rag import router as rag_router
 from prometheus_fastapi_instrumentator import Instrumentator
-
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
 app = FastAPI(
     title="AI Service",
@@ -20,6 +20,8 @@ Instrumentator().instrument(app).expose(
     endpoint="/metrics",
     include_in_schema=False,
 )
+
+FastAPIInstrumentor.instrument_app(app)
 
 @app.get("/health")
 async def health_check():

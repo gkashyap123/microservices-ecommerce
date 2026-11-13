@@ -17,5 +17,8 @@ datasets>=2.0,<3.0
 python-jose[cryptography]
 pydantic-settings
 python-dotenv
+deepeval
 
 prometheus-fastapi-instrumentator
+opentelemetry-sdk
+opentelemetry-instrumentation-fastapi

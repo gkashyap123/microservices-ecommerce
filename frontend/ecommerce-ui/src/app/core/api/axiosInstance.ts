@@ -3,7 +3,7 @@ import { store } from "../store/store";
 import toast from "react-hot-toast";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:8000",
+  baseURL: import.meta.env.VITE_GATEWAY_URL ?? "http://localhost:8006",
   headers: { "Content-Type": "application/json" },
 });
 

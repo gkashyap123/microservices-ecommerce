@@ -57,3 +57,32 @@ def validate_user_message(message: str) -> str:
             )
 
     return cleaned_message
+
+
+MAX_RESPONSE_LENGTH = 8000
+
+
+def validate_assistant_response(response: str) -> str:
+    """Validate an assistant response before returning it to the client."""
+
+    if not isinstance(response, str):
+        raise HTTPException(
+            status_code=500,
+            detail="Invalid assistant response.",
+        )
+
+    cleaned_response = response.strip()
+
+    if not cleaned_response:
+        raise HTTPException(
+            status_code=502,
+            detail="The assistant could not generate a response.",
+        )
+
+    if len(cleaned_response) > MAX_RESPONSE_LENGTH:
+        raise HTTPException(
+            status_code=502,
+            detail="The assistant response exceeds the allowed length.",
+        )
+
+    return cleaned_response

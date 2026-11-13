@@ -10,8 +10,11 @@ from langgraph.types import Command
 from graph.workflow import build_graph
 from tools.order_tool import get_order
 from core.security import get_current_user
-from core.guardrails import validate_user_message
-
+#from core.guardrails import validate_user_message,validate_assistant_response
+from core.guardrails import (
+    validate_user_message,
+    validate_assistant_response,
+)
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
 logger = logging.getLogger(__name__)
@@ -175,7 +178,9 @@ async def chat(
                 requires_confirmation=True,
             )
 
-        response_text = result.get("response", "")
+        response_text = validate_assistant_response(
+            result.get("response", "")
+        )
 
         # Save the validated message only after a completed turn.
         save_history(
@@ -254,7 +259,9 @@ async def confirm_cancellation(
                 requires_confirmation=True,
             )
 
-        response_text = result.get("response", "")
+        response_text = validate_assistant_response(
+            result.get("response", "")
+        )
         original_message = (snapshot.values or {}).get(
             "user_message",
             "Order cancellation request",
